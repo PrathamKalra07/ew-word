@@ -3,10 +3,12 @@ import { Input } from '@/components/ui/input'
 import React, { useState } from 'react'
 import axios from 'axios'
 import {toast} from "sonner"
+import { useNavigate } from 'react-router-dom'
 
 const Documents = () => {
 
     const [files,setFiles] = useState<Blob | undefined>();
+    const navigate = useNavigate();
 
     const updateFile = (e)=>{
         const file:Blob | undefined = e.target.files[0];
@@ -23,11 +25,15 @@ const Documents = () => {
 
             if(uploadRes.status ==200){
                 toast.success("File uploaded successfully");
+                setTimeout(()=>{
+                    navigate(`/document/${uploadRes.data.uuid}`)
+                },[2000])
             }else{
                 toast.error("File upload failed")
             }
         }
     }
+
   return (
     <div className='h-[100vh] relative'> 
         <div className='text-xl font-semibold absolute top-[45%] w-[100%] text-center '>

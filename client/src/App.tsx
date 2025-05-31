@@ -18,7 +18,6 @@ function App() {
             <Route path='*' element={<NotFound />} />
             <Route path='/documents' element={<Documents />} />
             <Route path='/document/:fileId' element={<Document />} />
-
         </Routes>
      </BrowserRouter>
     </>
