@@ -6,6 +6,16 @@ export const PageBreak = Node.create({
   group: 'block',
   atom: true,
 
+  addOptions() {
+    return {
+      // Add an option to control border visibility
+      showBorder: true,
+      HTMLAttributes: {
+        'data-page-break': 'true',
+      },
+    };
+  },
+
   parseHTML() {
     return [
       {
@@ -14,11 +24,32 @@ export const PageBreak = Node.create({
     ];
   },
 
-  renderHTML() {
+  renderHTML({ HTMLAttributes }) {
+    const baseAttributes = {
+      ...HTMLAttributes,
+      'data-page-break': 'true',
+    };
+
+    // Only add border in editor mode
+    if (this.options.showBorder) {
+      return [
+        'p',
+        { 
+          ...baseAttributes,
+          style: 'page-break-after: always; border-top: 1px dashed #ccc; margin: 1em 0;',
+        },
+        '\u00A0',
+      ];
+    }
+
+    // Clean output for export
     return [
       'p',
-      { style: 'page-break-after: always;', 'data-page-break': 'true' },
-      '\u00A0', // non-breaking space, required so LibreOffice preserves the tag
+      { 
+        ...baseAttributes,
+        style: 'page-break-after: always;',
+      },
+      '\u00A0',
     ];
   },
 });

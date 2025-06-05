@@ -37,7 +37,17 @@ const DocxViewer = ({ fileBlob }: { fileBlob: Blob }) => {
     const renderAndExtract = async () => {
       if (!fileBlob || !containerRef.current) return;
 
-      await renderAsync(fileBlob, containerRef.current);
+      await renderAsync(fileBlob, containerRef.current, null , {
+        ignoreLastRenderedPageBreak: false,
+    breakPages: true,
+    renderPageBreak: () => '<div class="page-break" data-page-break="true"></div>',
+    experimental: {
+      // Additional features to preserve document structure
+      includePageBreaks: true,
+      parsePageBreaks: true,
+    },
+      });
+
       const styledHTML = inlineComputedStyles(containerRef.current);
       console.log('INLINE HTML:', styledHTML);
       setContent(styledHTML);

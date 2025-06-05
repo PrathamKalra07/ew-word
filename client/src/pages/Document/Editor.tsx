@@ -45,7 +45,7 @@ import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
   import { useEffect, useState } from 'react';
   import { IndentedParagraph } from './extensions/IndentedParagraph';
-  // import Section from './extensions/Section';
+  import Section from './extensions/Section';
 import axios from 'axios';
 import { useParams } from 'react-router-dom';
 // import { c } from 'node_modules/vite/dist/node/moduleRunnerTransport.d-DJ_mE5sf';
@@ -145,7 +145,7 @@ const fontSizes = [
         setDownloadDisabled(true);
         setSaveDisabled(true);
         const content:string | undefined = editor?.getHTML();
-        const fullHTML = `
+        let fullHTML = `
 <!DOCTYPE html>
 <html>
   <head>
@@ -163,7 +163,13 @@ const fontSizes = [
 
 
 `;
-        console.log(content);
+
+        fullHTML = fullHTML.replace(/<section style="page-break-after: always;">/g,'');
+        fullHTML = fullHTML.replace(/<\/section>/g, '<p style="page-break-after: always;">&nbsp;</p>');
+        fullHTML = fullHTML.replace(/<div class="pagebreak">&nbsp;<\/div>/g,'<p style="page-break-after: always;">&nbsp;</p>');
+        // fullHTML = fullHTML.replace(/<\/div>/g, '<p style="page-break-after: always;">&nbsp;</p>');
+
+        console.log(fullHTML);
         const imgHtml = fixImageSizes(fullHTML);
         const saveRes = await axios.post(`http://localhost:8085/save/`,{'html':imgHtml,'uuid':fileId});
         if(saveRes.status !== 200 || !saveRes ){
@@ -294,29 +300,83 @@ const fixImageSizes = (html: string): string => {
   return div.innerHTML;
 };
 
-function getFontFamilyAtCursor(editor): {fontFamily:string,fontSize:string} | null {
-  const { from } = editor.state.selection
-  const dom = editor.view.domAtPos(from)
+function processHtmlForTipTap(html: string): string {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
 
-  const element = (dom.node.nodeType === 3 ? dom.node.parentElement : dom.node) as HTMLElement
-
-  if (!element) return null
-
-  const computedStyle = window.getComputedStyle(element)
-  console.log('font family selected : ', computedStyle.fontFamily)
-  // if(frameworks.includes(computedStyle.fontFamily));
-
-  let currentFont;
-  let currentFontSize;
-  frameworks.map((font)=>{
-    if(font.value === computedStyle.fontFamily){
-      // return computedStyle.fontFamily
-      currentFont = computedStyle.fontFamily;
-      currentFontSize = computedStyle.fontSize;
+  // Convert all page breaks to a consistent format
+  doc.querySelectorAll('[style*="page-break"], [style*="break-after"]').forEach(el => {
+    if (getComputedStyle(el).getPropertyValue('page-break-after') === 'always' || 
+        getComputedStyle(el).getPropertyValue('break-after') === 'page') {
+      el.replaceWith(createPageBreakElement());
     }
-  })
-  return {"fontFamily" : currentFont,"fontSize" : currentFontSize}; 
+  });
+
+  // Handle LibreOffice-style page breaks
+  doc.querySelectorAll('hr[type="page-break"]').forEach(el => {
+    el.replaceWith(createPageBreakElement());
+  });
+
+  // Handle empty paragraphs that might be page breaks
+  doc.querySelectorAll('p, div').forEach(el => {
+    if (el.innerHTML.trim() === '' && el.textContent === '\f') { // Form feed character
+      el.replaceWith(createPageBreakElement());
+    }
+  });
+
+  return doc.body.innerHTML;
 }
+
+function createPageBreakElement(): HTMLElement {
+  const div = document.createElement('div');
+  div.className = 'page-break';
+  div.setAttribute('data-page-break', 'true');
+  div.innerHTML = '<!-- PAGE BREAK -->';
+  return div;
+}
+
+
+function getFontFamilyAtCursor(editor): { fontFamily: string, fontSize: string } | null {
+  const { from } = editor.state.selection;
+  let dom = editor.view.domAtPos(from);
+
+  // If the node is a text node, use its parent
+  let element = (dom.node.nodeType === 3 ? dom.node.parentElement : dom.node) as HTMLElement;
+
+  // If element is a block like <p> with no style, try to find a styled span inside
+  if (element && element.nodeType === 1 && element.childNodes.length > 0) {
+    const styledChild = Array.from(element.childNodes).find(child => {
+      if (child.nodeType !== 1) return false;
+      const style = window.getComputedStyle(child as HTMLElement);
+      return style.fontFamily && style.fontFamily !== "";
+    }) as HTMLElement;
+
+    if (styledChild) element = styledChild;
+  }
+
+  if (!element) return null;
+
+  const computedStyle = window.getComputedStyle(element);
+  const rawFont = computedStyle.fontFamily;
+  const fontSize = computedStyle.fontSize;
+
+  const cleanedFont = rawFont
+    .split(",")[0]
+    .replace(/['"]/g, "")
+    .trim();
+
+  const matchedFont = frameworks.find(font => font.value === cleanedFont);
+
+  if (matchedFont) {
+    return {
+      fontFamily: matchedFont.value,
+      fontSize: fontSize,
+    };
+  }
+
+  return null;
+}
+
 
     
     const editor = useEditor({
@@ -337,7 +397,7 @@ function getFontFamilyAtCursor(editor): {fontFamily:string,fontSize:string} | nu
         }),
         Highlight,
         IndentedParagraph,
-        // Section,
+        Section,
         Table.configure({
   resizable: true,
   HTMLAttributes: {
@@ -374,11 +434,11 @@ UnderlineTipTap,
 PageBreak,
 // ResizableImage,
       ],
-      content: preserveLeadingSpaces(initialHTML),
+      content: processHtmlForTipTap(preserveLeadingSpaces(initialHTML)),
       editorProps :{
         attributes :{
-            style : "",
-            class:"focus:outline-none print:border-0 bg-white border border-gray-300 rounded-sm flex flex-col min-h-[1000.89px] w-[794px] mx-auto pt-20 px-20 pb-20 leading-normal cursor-text text-[11px] mt-10" 
+            style : "page-break-after: always",
+            class:"focus:outline-none print:border-0 bg-gray border border-gray-300 rounded-sm flex flex-col min-h-[1000.89px] w-[794px] mx-auto pt-10 px-0 pb-10 leading-normal cursor-text text-[11px] mt-10" 
         }
     }
     });
@@ -531,6 +591,9 @@ useEffect(() => {
   <HoverCard openDelay={100} closeDelay={100}>
   <HoverCardTrigger>    
   <Button variant="outline" onClick={() =>{editor?.commands.insertContent({type: 'pageBreak',})}}>
+    
+    {/* '<div class="pagebreak" contenteditable="false" data-page-break="true">&nbsp;</div>' */}
+    {/* editor?.commands.insertContent('</section><section style="page-break-after : always">'); */}
     <SquareSplitVertical />
 </Button>
 </HoverCardTrigger>
