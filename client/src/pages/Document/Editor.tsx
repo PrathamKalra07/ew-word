@@ -45,7 +45,7 @@ import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
   import { useEffect, useState } from 'react';
   import { IndentedParagraph } from './extensions/IndentedParagraph';
-  import Section from './extensions/Section';
+  // import Section from './extensions/Section';
 import axios from 'axios';
 import { useParams } from 'react-router-dom';
 // import { c } from 'node_modules/vite/dist/node/moduleRunnerTransport.d-DJ_mE5sf';
@@ -397,7 +397,7 @@ function getFontFamilyAtCursor(editor): { fontFamily: string, fontSize: string }
         }),
         Highlight,
         IndentedParagraph,
-        Section,
+        // Section,
         Table.configure({
   resizable: true,
   HTMLAttributes: {
@@ -438,29 +438,79 @@ PageBreak,
       editorProps :{
         attributes :{
             style : "page-break-after: always",
-            class:"focus:outline-none print:border-0 bg-gray border border-gray-300 rounded-sm flex flex-col min-h-[1000.89px] w-[794px] mx-auto pt-10 px-0 pb-10 leading-normal cursor-text text-[11px] mt-10" 
+            class:"focus:outline-none print:border-0 bg-white border border-gray-300 rounded-sm flex flex-col min-h-[1000.89px] w-[794px] mx-auto pt-20 px-20 pb-20 leading-normal cursor-text text-[11px] mt-10" 
         }
     }
     });
 
-useEffect(() => {
+    useEffect(() => {
   if (!editor) return;
 
-  const handler=()=>{
-    const getFontStyle:{fontFamily:string,fontSize:string} | null = getFontFamilyAtCursor(editor)
-    const font:string = getFontStyle?.fontFamily || ''
-    const size:string = getFontStyle?.fontSize || ''
+  const handler = () => {
+    // Update font at cursor
+    const getFontStyle: { fontFamily: string; fontSize: string } | null = getFontFamilyAtCursor(editor);
+    const font: string = getFontStyle?.fontFamily || '';
+    const size: string = getFontStyle?.fontSize || '';
 
     setFontFamilyValue(font);
     setFontSize(size);
-  }
 
-   editor.on('selectionUpdate', handler)
+    // Check section heights
+    // const proseMirrorEl = document.querySelector('.ProseMirror');
+    // if (!proseMirrorEl) return;
 
+    // const blocks = proseMirrorEl.querySelectorAll('p, h1, h2, ul, ol, blockquote');
+
+    // let runningHeight = 0;
+
+    
+    // blocks.forEach(block => {
+    //   const height = block.clientHeight;
+    //   runningHeight += height;
+
+    //   const prevNode = block.previousElementSibling?.classList.contains('page-break');
+
+    //   console.log(prevNode)
+
+    //   if (runningHeight > 1050 && !prevNode) {
+    //     const pos = editor.view.posAtDOM(block, 0);
+    //     editor.commands.insertContentAt(pos, { type: 'pageBreak' });
+    //     runningHeight = 0;
+    //   }
+    // });
+  };
+
+  //  const proseMirrorEl = document.querySelector('.ProseMirror');
+  //   if (!proseMirrorEl) return;
+
+  //   const blocks = proseMirrorEl.querySelectorAll('p, h1, h2, ul, ol, blockquote');
+
+  //   let runningHeight = 0;
+
+    
+  //   blocks.forEach(block => {
+  //     const height = block.clientHeight;
+  //     runningHeight += height;
+
+  //     const prevNode = block.previousElementSibling?.classList.contains('page-break');
+
+  //     console.log(prevNode)
+
+  //     if (runningHeight > 1050 && !prevNode) {
+  //       const pos = editor.view.posAtDOM(block, 0);
+  //       editor.commands.insertContentAt(pos, { type: 'pageBreak' });
+  //       runningHeight = 0;
+  //     }
+  //   });
+
+  // Listen to content updates
+  
+  editor.on('create', handler);
   return () => {
-    editor.off('selectionUpdate', handler)
-  }
+    editor.off('create', handler);
+  };
 }, [editor]);
+
 
 
     return <div className='bg-gray-300 absolute top-0 bottom-0 left-0 right-0 h-fit'>

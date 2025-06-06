@@ -36,6 +36,7 @@ export const PageBreak = Node.create({
         'p',
         { 
           ...baseAttributes,
+          class:'page-break',
           style: 'page-break-after: always; border-top: 1px dashed #ccc; margin: 1em 0;',
         },
         '\u00A0',
@@ -47,6 +48,7 @@ export const PageBreak = Node.create({
       'p',
       { 
         ...baseAttributes,
+        class:'page-break',
         style: 'page-break-after: always;',
       },
       '\u00A0',
