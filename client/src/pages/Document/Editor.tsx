@@ -22,7 +22,7 @@ import Image from '@tiptap/extension-image';
   import ImageResize from 'tiptap-extension-resize-image';
 import { Button } from "@/components/ui/button"
 import { Check, ChevronsUpDown, Link2, ArrowDownToLine } from "lucide-react"
-import { createContext, useContext } from 'react'
+import { createContext, useContext, useMemo } from 'react'
 import {
   HoverCard,
   HoverCardContent,
@@ -45,7 +45,7 @@ import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
   import { useEffect, useState } from 'react';
   import { IndentedParagraph } from './extensions/IndentedParagraph';
-  import Section from './extensions/Section';
+  // import Section from './extensions/Section';
 import axios from 'axios';
 import { useParams } from 'react-router-dom';
 // import { c } from 'node_modules/vite/dist/node/moduleRunnerTransport.d-DJ_mE5sf';
@@ -377,6 +377,9 @@ function getFontFamilyAtCursor(editor): { fontFamily: string, fontSize: string }
   return null;
 }
 
+const processedHTML = useMemo(() => {
+  return processHtmlForTipTap(preserveLeadingSpaces(initialHTML));
+}, [initialHTML]);
 
     
     const editor = useEditor({
@@ -397,29 +400,29 @@ function getFontFamilyAtCursor(editor): { fontFamily: string, fontSize: string }
         }),
         Highlight,
         IndentedParagraph,
-        Section,
-//         Table.configure({
-//   resizable: true,
-//   HTMLAttributes: {
-//     class: 'border border-gray-300 border-collapse table-auto',
-//     style: 'width: 100%;',
-//   },
-// }),
-// TableRow.configure({
-//   HTMLAttributes: {
-//     class: 'border border-gray-300',
-//   },
-// }),
-// TableHeader.configure({
-//   HTMLAttributes: {
-//     class: 'border border-gray-300 bg-gray-100 font-semibold p-2',
-//   },
-// }),
-// TableCell.configure({
-//   HTMLAttributes: {
-//     class: 'border border-gray-300 p-2',
-//   },
-// }),
+        // Section,
+        Table.configure({
+  resizable: true,
+  HTMLAttributes: {
+    class: 'border border-gray-300 border-collapse table-auto',
+    style: 'width: 100%;',
+  },
+}),
+TableRow.configure({
+  HTMLAttributes: {
+    class: 'border border-gray-300',
+  },
+}),
+TableHeader.configure({
+  HTMLAttributes: {
+    class: 'border border-gray-300 bg-gray-100 font-semibold p-2',
+  },
+}),
+TableCell.configure({
+  HTMLAttributes: {
+    class: 'border border-gray-300 p-2',
+  },
+}),
 HorizontalRule,
 BulletList,
 OrderedList,
@@ -434,14 +437,15 @@ UnderlineTipTap,
 PageBreak,
 // ResizableImage,
       ],
-      content: processHtmlForTipTap(preserveLeadingSpaces(initialHTML)),
+      content: processedHTML,
       editorProps :{
         attributes :{
             style : "page-break-after: always",
-            class:"focus:outline-none print:border-0 bg-gray-300 border border-gray-300 rounded-sm flex flex-col min-h-[1000.89px] w-[794px] mx-auto pt-10 px-0 pb-10 leading-normal cursor-text text-[11px] mt-10" 
+            class:"focus:outline-none print:border-0 bg-white border border-gray-300 rounded-sm flex flex-col min-h-[1000.89px] w-[794px] mx-auto pt-20 px-10 pb-20 leading-normal cursor-text text-[11px] mt-10" 
         }
     }
     });
+
 
     useEffect(() => {
   if (!editor) return;
@@ -456,29 +460,29 @@ PageBreak,
     setFontSize(size);
 
     // Check section heights
-    // const proseMirrorEl = document.querySelector('.ProseMirror');
-    // if (!proseMirrorEl) return;
+    const proseMirrorEl = document.querySelector('.ProseMirror');
+    if (!proseMirrorEl) return;
 
-    // const blocks = proseMirrorEl.querySelectorAll('p, h1, h2, ul, ol, blockquote');
+    const blocks = proseMirrorEl.querySelectorAll('p, h1, h2, ul, ol, blockquote');
 
-    // let runningHeight = 0;
+    let runningHeight = 0;
 
     
-    // blocks.forEach(block => {
-    //   const height = block.clientHeight;
-    //   runningHeight += height;
+    blocks.forEach(block => {
+      const height = block.clientHeight;
+      runningHeight += height;
 
-    //   const prevNode = block.previousElementSibling?.classList.contains('page-break');
+      const prevNode = block.previousElementSibling?.classList.contains('page-break');
 
-    //   console.log(prevNode)
+      console.log(prevNode)
 
-    //   if (runningHeight > 1050 && !prevNode) {
-    //     const pos = editor.view.posAtDOM(block, 0);
-    //     editor.commands.insertContentAt(pos, { type: 'pageBreak' });
-    //     runningHeight = 0;
-    //   }
-    // });
-  // };
+      if (runningHeight > 1050 && !prevNode) {
+        const pos = editor.view.posAtDOM(block, 0);
+        editor.commands.insertContentAt(pos, { type: 'pageBreak' });
+        runningHeight = 0;
+      }
+    });
+  };
 
   //  const proseMirrorEl = document.querySelector('.ProseMirror');
   //   if (!proseMirrorEl) return;
@@ -504,11 +508,10 @@ PageBreak,
   //   });
 
   // Listen to content updates
-  // editor.on('create', handler);
-}
-//   return () => {
-//     editor.off('create', handler);
-//   };
+  editor.on('create', handler);
+  return () => {
+    editor.off('create', handler);
+  };
 }, [editor]);
 
 
