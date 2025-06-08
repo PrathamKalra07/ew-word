@@ -45,13 +45,14 @@ import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
   import { useEffect, useState } from 'react';
   import { IndentedParagraph } from './extensions/IndentedParagraph';
-  // import Section from './extensions/Section';
+  import Section from './extensions/Section';
 import axios from 'axios';
 import { useParams } from 'react-router-dom';
 // import { c } from 'node_modules/vite/dist/node/moduleRunnerTransport.d-DJ_mE5sf';
 import { toast } from 'sonner';
 import React from 'react';
-import { PageBreak } from './extensions/PageBreaks';
+// import { PageBreak } from './extensions/PageBreaks';
+import { AutoPaginateExtension } from './extensions/AutoPaginateExtension';
 
  
     const frameworks = [
@@ -400,7 +401,7 @@ const processedHTML = useMemo(() => {
         }),
         Highlight,
         IndentedParagraph,
-        // Section,
+        Section,
         Table.configure({
   resizable: true,
   HTMLAttributes: {
@@ -426,6 +427,7 @@ TableCell.configure({
 HorizontalRule,
 BulletList,
 OrderedList,
+AutoPaginateExtension,
 ListItem,
 TextAlign.configure({
   types: ['heading', 'paragraph'],
@@ -434,16 +436,16 @@ TextAlign.configure({
 }),
 ImageResize,
 UnderlineTipTap,
-PageBreak,
+// PageBreak,
 // ResizableImage,
       ],
       content: processedHTML,
       editorProps :{
         attributes :{
             style : "page-break-after: always",
-            class:"focus:outline-none print:border-0 bg-white border border-gray-300 rounded-sm flex flex-col min-h-[1000.89px] w-[794px] mx-auto pt-20 px-10 pb-20 leading-normal cursor-text text-[11px] mt-10" 
+            class:"focus:outline-none print:border-0 bg-gray-300 border border-gray-300 rounded-sm flex flex-col min-h-[1000.89px] w-[794px] mx-auto pt-10 px-0 pb-10 leading-normal cursor-text text-[11px] mt-10" 
         }
-    }
+    },
     });
 
 

@@ -1,9 +1,13 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 
+const A4_WIDTH_PX = 794;
+const A4_HEIGHT_PX = 1123;
+
 const Section = Node.create({
   name: 'section',
   group: 'block',
   content: 'block+',
+  isolating: true, // Prevent content merging between sections
 
   parseHTML() {
     return [
@@ -12,18 +16,15 @@ const Section = Node.create({
         getAttrs: (node) => {
           if (!(node instanceof HTMLElement)) return {};
 
-          // Try to extract style from <section>
           let style = node.getAttribute('style') || '';
 
-          // Look for a nested <article> and append its styles if missing
+          // Include nested <article> styles if present
           const article = node.querySelector('article');
-          if (article && article.getAttribute('style')) {
+          if (article?.getAttribute('style')) {
             style += ';' + article.getAttribute('style');
           }
 
-          return {
-            style,
-          };
+          return { style };
         },
       },
     ];
@@ -37,11 +38,21 @@ const Section = Node.create({
       mergeAttributes(HTMLAttributes, {
         style: hasStyle
           ? HTMLAttributes.style
-          : `width: 794px; min-height: 900px; padding: 91px 51px; margin: 2rem auto; background: white; border: 1px solid #ddd; box-sizing: border-box; page-break-after : always`,
-      }), 
+          : `
+            width: ${A4_WIDTH_PX}px;
+            height: ${A4_HEIGHT_PX}px;
+            padding: 91px 51px;
+            margin: 2rem auto;
+            background: white;
+            border: 1px solid #ddd;
+            box-sizing: border-box;
+            overflow: hidden;
+            page-break-after: always;
+          `,
+      }),
       0,
     ];
   },
 });
 
-export default Section;
+export default Section

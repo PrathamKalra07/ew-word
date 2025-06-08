@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { renderAsync } from 'docx-preview';
-// import Editor from './Editor';
 import Editor from './Editor';
+
+const PAGE_HEIGHT = 1123; // A4 at 96 DPI approx
 
 const DocxViewer = ({ fileBlob }: { fileBlob: Blob }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -34,34 +35,69 @@ const DocxViewer = ({ fileBlob }: { fileBlob: Blob }) => {
   };
 
   useEffect(() => {
-    const renderAndExtract = async () => {
+    const renderAndPaginate = async () => {
       if (!fileBlob || !containerRef.current) return;
 
-      await renderAsync(fileBlob, containerRef.current, null , {
-        ignoreLastRenderedPageBreak: false,
-    breakPages: true,
-    renderPageBreak: () => '<div class="page-break" data-page-break="true"></div>',
-    experimental: {
-      // Additional features to preserve document structure
-      includePageBreaks: true,
-      parsePageBreaks: true,
-    },
+      const container = containerRef.current;
+      container.innerHTML = ''; // Clear
+
+      await renderAsync(fileBlob, container, null, {
+        breakPages: false,
       });
 
-      const styledHTML = inlineComputedStyles(containerRef.current);
-      console.log('INLINE HTML:', styledHTML);
+      await new Promise((r) => setTimeout(r, 0)); // Let layout finish
+
+      const allElements = Array.from(container.childNodes).filter(
+        (node) => node.nodeType === Node.ELEMENT_NODE
+      ) as HTMLElement[];
+
+      // Move everything to a temporary holder
+      const tempWrapper = document.createElement('div');
+      allElements.forEach((el) => tempWrapper.appendChild(el));
+
+      container.innerHTML = '';
+
+      let currentPage = document.createElement('div');
+      currentPage.className = 'docx-page';
+      container.appendChild(currentPage);
+
+      let currentHeight = 0;
+
+      for (let i = 0; i < tempWrapper.childNodes.length; i++) {
+        const node = tempWrapper.childNodes[i] as HTMLElement;
+        container.appendChild(node); // attach temporarily to measure
+        const height = node.offsetHeight;
+
+        if (currentHeight + height > PAGE_HEIGHT && currentHeight > 0) {
+          currentPage = document.createElement('div');
+          currentPage.className = 'docx-page';
+          container.appendChild(currentPage);
+          currentHeight = 0;
+        }
+
+        currentPage.appendChild(node);
+        currentHeight += height;
+      }
+
+      const styledHTML = inlineComputedStyles(container);
       setContent(styledHTML);
     };
 
-    renderAndExtract();
+    renderAndPaginate();
   }, [fileBlob]);
 
   return (
     <div>
-      {content && <Editor initialHTML={content} />} 
+      {content && <Editor initialHTML={content} />}
       <div
         ref={containerRef}
-        style={{ display: 'none', position: 'absolute', top: '-9999px', left: '-9999px' }}
+        style={{
+          display: 'block',
+          position: 'absolute',
+          top: '-9999px',
+          left: '-9999px',
+          width: '794px', // A4 width in pixels at 96dpi
+        }}
       />
     </div>
   );
