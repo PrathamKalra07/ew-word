@@ -53,6 +53,7 @@ import { toast } from 'sonner';
 import React from 'react';
 // import { PageBreak } from './extensions/PageBreaks';
 import AutoPaginateExtension from './extensions/AutoPaginateExtension';
+import DeleteEmptyPagePlugin from './extensions/deleteEmptyPagePlugin';
 
  
     const frameworks = [
@@ -243,10 +244,6 @@ const handleSave = async () => {
     toast.error('Unexpected Error: ' + (e instanceof Error ? e.message : String(e)));
   }
 };
-
-
-
-
     const handleDownload = async ()=>{
       try{
         const content:string | undefined = editor?.getHTML();
@@ -489,6 +486,7 @@ BulletList,
 OrderedList,
 AutoPaginateExtension,
 ListItem,
+DeleteEmptyPagePlugin,
 TextAlign.configure({
   types: ['heading', 'paragraph'],
   alignments: ['left', 'center', 'right', 'justify'],
@@ -552,6 +550,45 @@ UnderlineTipTap,
     editor.off('create', handler);
   };
 }, [editor]);
+
+useEffect(() => {
+  if (!editor) return;
+
+  const handleKeyDown = (event: KeyboardEvent) => {
+    if (event.key !== 'Backspace') return;
+
+    const selection = editor.state.selection;
+    const { $from } = selection;
+
+    // Find the closest section (page)
+    const section = $from.node(-1); // go one level up in the document
+
+    if (section && section.type.name === 'paragraph' && section.textContent.trim() === '') {
+      const parentPos = $from.before($from.depth - 1);
+      const parentNode = editor.state.doc.nodeAt(parentPos);
+
+      if (parentNode?.type.name === 'docxPage') {
+        const isEmpty = parentNode.content.size === 0 || parentNode.textContent.trim() === '';
+
+        if (isEmpty) {
+          event.preventDefault();
+
+          editor.commands.command(({ tr }) => {
+            tr.delete(parentPos, parentPos + parentNode.nodeSize);
+            return true;
+          });
+        }
+      }
+    }
+  };
+
+  document.addEventListener('keydown', handleKeyDown);
+
+  return () => {
+    document.removeEventListener('keydown', handleKeyDown);
+  };
+}, [editor]);
+
 
 
 
