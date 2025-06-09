@@ -1,14 +1,12 @@
-// PageBreak.ts
 import { Node } from '@tiptap/core';
 
 export const PageBreak = Node.create({
   name: 'pageBreak',
-  group: 'block',
-  atom: true,
+  group: 'block',    // block node so it behaves like a block
+  atom: true,        // atom so it's treated as a single unit
 
   addOptions() {
     return {
-      // Add an option to control border visibility
       showBorder: true,
       HTMLAttributes: {
         'data-page-break': 'true',
@@ -19,7 +17,7 @@ export const PageBreak = Node.create({
   parseHTML() {
     return [
       {
-        tag: 'div[data-page-break]',
+        tag: 'hr[data-page-break="true"]',
       },
     ];
   },
@@ -28,30 +26,15 @@ export const PageBreak = Node.create({
     const baseAttributes = {
       ...HTMLAttributes,
       'data-page-break': 'true',
+      style: 'page-break-after: always; border: none; margin: 1em 0; height: 0;',
+      class: 'page-break',
     };
 
-    // Only add border in editor mode
     if (this.options.showBorder) {
-      return [
-        'p',
-        { 
-          ...baseAttributes,
-          class:'page-break',
-          style: 'page-break-after: always; border-top: 1px dashed #ccc; margin: 1em 0;',
-        },
-        '\u00A0',
-      ];
+      baseAttributes.style = 'page-break-after: always; border-top: 1px dashed #ccc; margin: 1em 0;';
     }
 
-    // Clean output for export
-    return [
-      'p',
-      { 
-        ...baseAttributes,
-        class:'page-break',
-        style: 'page-break-after: always;',
-      },
-      '\u00A0',
-    ];
+    // Render as <hr> for semantic page break, no wrapping section tag
+    return ['hr', baseAttributes];
   },
 });

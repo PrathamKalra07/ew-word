@@ -1,10 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { renderAsync } from 'docx-preview';
 import Editor from './Editor';
+import axios from 'axios';
+import { useParams } from 'react-router-dom';
 
 const PAGE_HEIGHT = 1123; // A4 at 96 DPI approx
 
-const DocxViewer = ({ fileBlob }: { fileBlob: Blob }) => {
+const DocxViewer = () => {
+  const params = useParams();
   const containerRef = useRef<HTMLDivElement>(null);
   const [content, setContent] = useState<string | undefined>();
 
@@ -35,56 +38,67 @@ const DocxViewer = ({ fileBlob }: { fileBlob: Blob }) => {
   };
 
   useEffect(() => {
-    const renderAndPaginate = async () => {
-      if (!fileBlob || !containerRef.current) return;
+    const fetchAndRender = async () => {
+      if (!params.fileId || !containerRef.current) return;
 
-      const container = containerRef.current;
-      container.innerHTML = ''; // Clear
+      try {
+        // Fetch the document as a blob
+        const response = await axios.get(`http://localhost:8085/getDocument/${params.fileId}`, {
+          responseType: 'blob',
+        });
 
-      await renderAsync(fileBlob, container, null, {
-        breakPages: false,
-      });
+        const fileBlob = response.data;
+        const container = containerRef.current;
+        container.innerHTML = ''; // Clear existing content
 
-      await new Promise((r) => setTimeout(r, 0)); // Let layout finish
+        // Render the docx into the container
+        await renderAsync(fileBlob, container, null, {
+          breakPages: false,
+        });
 
-      const allElements = Array.from(container.childNodes).filter(
-        (node) => node.nodeType === Node.ELEMENT_NODE
-      ) as HTMLElement[];
+        await new Promise((r) => setTimeout(r, 0)); // Let DOM settle
 
-      // Move everything to a temporary holder
-      const tempWrapper = document.createElement('div');
-      allElements.forEach((el) => tempWrapper.appendChild(el));
+        // Paginate into A4-sized divs
+        const allElements = Array.from(container.childNodes).filter(
+          (node) => node.nodeType === Node.ELEMENT_NODE
+        ) as HTMLElement[];
 
-      container.innerHTML = '';
+        const tempWrapper = document.createElement('div');
+        allElements.forEach((el) => tempWrapper.appendChild(el));
+        container.innerHTML = '';
 
-      let currentPage = document.createElement('div');
-      currentPage.className = 'docx-page';
-      container.appendChild(currentPage);
+        let currentPage = document.createElement('div');
+        currentPage.className = 'docx-page';
+        container.appendChild(currentPage);
 
-      let currentHeight = 0;
+        let currentHeight = 0;
 
-      for (let i = 0; i < tempWrapper.childNodes.length; i++) {
-        const node = tempWrapper.childNodes[i] as HTMLElement;
-        container.appendChild(node); // attach temporarily to measure
-        const height = node.offsetHeight;
+        for (let i = 0; i < tempWrapper.childNodes.length; i++) {
+          const node = tempWrapper.childNodes[i] as HTMLElement;
+          container.appendChild(node); // temporarily attach to measure
+          const height = node.offsetHeight;
 
-        if (currentHeight + height > PAGE_HEIGHT && currentHeight > 0) {
-          currentPage = document.createElement('div');
-          currentPage.className = 'docx-page';
-          container.appendChild(currentPage);
-          currentHeight = 0;
+          if (currentHeight + height > PAGE_HEIGHT && currentHeight > 0) {
+            currentPage = document.createElement('div');
+            currentPage.className = 'docx-page';
+            container.appendChild(currentPage);
+            currentHeight = 0;
+          }
+
+          currentPage.appendChild(node);
+          currentHeight += height;
         }
 
-        currentPage.appendChild(node);
-        currentHeight += height;
+        // Convert with inline styles
+        const styledHTML = inlineComputedStyles(container);
+        setContent(styledHTML);
+      } catch (err) {
+        console.error('Error fetching or rendering DOCX:', err);
       }
-
-      const styledHTML = inlineComputedStyles(container);
-      setContent(styledHTML);
     };
 
-    renderAndPaginate();
-  }, [fileBlob]);
+    fetchAndRender();
+  }, [params.fileId]);
 
   return (
     <div>
@@ -96,7 +110,7 @@ const DocxViewer = ({ fileBlob }: { fileBlob: Blob }) => {
           position: 'absolute',
           top: '-9999px',
           left: '-9999px',
-          width: '794px', // A4 width in pixels at 96dpi
+          width: '794px', // A4 width in pixels
         }}
       />
     </div>

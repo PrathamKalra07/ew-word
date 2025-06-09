@@ -1,76 +1,43 @@
-// auto-paginate-extension.ts
-import { Extension } from '@tiptap/core';
+import { Extension } from '@tiptap/react';
 import { Plugin, PluginKey } from 'prosemirror-state';
 
-const A4_HEIGHT_PX = 1123;
-
-export const AutoPaginateExtension = Extension.create({
+const A4_HEIGHT_PX = 1140;
+const AutoPaginateExtension = Extension.create({
   name: 'autoPaginate',
 
   addProseMirrorPlugins() {
     return [
       new Plugin({
-        key: new PluginKey('auto-paginate'),
         view: (editorView) => ({
           update: (view) => {
-            const sectionDOMs = view.dom.querySelectorAll('section');
+            const { state } = view;
+            const { doc, schema, tr } = state;
 
-            sectionDOMs.forEach((sectionEl) => {
-              const sectionHeight = sectionEl.offsetHeight;
+            const sections = view.dom.querySelectorAll('section');
 
-              if (sectionHeight > A4_HEIGHT_PX) {
-                const children = Array.from(sectionEl.children) as HTMLElement[];
+            sections.forEach((sectionEl) => {
+              if (sectionEl.offsetHeight <= A4_HEIGHT_PX) return;
 
-                let cumulativeHeight = 0;
-                let splitChildIndex = -1;
+              const sectionPos = view.posAtDOM(sectionEl, 0);
+              const $pos = state.doc.resolve(sectionPos);
+              const parentNode = $pos.nodeAfter;
 
-                for (let i = 0; i < children.length; i++) {
-                  cumulativeHeight += children[i].offsetHeight;
+              if (!parentNode || parentNode.type.name !== 'section') return;
 
-                  if (cumulativeHeight > A4_HEIGHT_PX) {
-                    splitChildIndex = i;
-                    break;
-                  }
-                }
+              const start = sectionPos + 1;
+              const end = sectionPos + parentNode.nodeSize - 1;
 
-                if (splitChildIndex === -1) return;
+              const splitAt = start + Math.floor((end - start) / 2); // Or calculate better
+              const slice = doc.slice(splitAt, end);
 
-                const splitChild = children[splitChildIndex];
-                const overflowPos = view.posAtDOM(splitChild, 0);
+              const pageBreak = schema.nodes.pageBreak?.create();
+              const newSection = schema.nodes.section?.create({}, slice.content);
 
-                const { state } = view;
-                const $pos = state.doc.resolve(overflowPos);
-                const parentSectionPos = $pos.before($pos.depth);
-                const parentSectionNode = $pos.node($pos.depth - 1);
+              tr.delete(splitAt, end);
+              if (pageBreak) tr.insert(splitAt, pageBreak);
+              if (newSection) tr.insert(splitAt + 1, newSection);
 
-                if (!parentSectionNode || parentSectionNode.type.name !== 'section') return;
-                const alreadySplit = parentSectionNode.attrs['data-split'];
-                if (alreadySplit) return;
-
-                const tr = state.tr;
-
-                // Mark the section to prevent repeat splitting
-                tr.setNodeMarkup(parentSectionPos, undefined, {
-                  ...parentSectionNode.attrs,
-                  'data-split': true,
-                });
-
-                const sectionStart = parentSectionPos + 1;
-                const sectionEnd = parentSectionPos + parentSectionNode.nodeSize - 1;
-
-                if (overflowPos <= sectionStart || overflowPos >= sectionEnd) return;
-
-                const overflowSlice = state.doc.slice(overflowPos, sectionEnd);
-                const newSection = state.schema.nodes.section?.create({}, overflowSlice.content);
-
-                tr.delete(overflowPos, sectionEnd);
-
-                const insertPos = parentSectionPos + parentSectionNode.nodeSize - (sectionEnd - overflowPos);
-                if (newSection) {
-                  tr.insert(insertPos, newSection);
-                  view.dispatch(tr);
-                }
-              }
+              view.dispatch(tr);
             });
           },
         }),
@@ -78,3 +45,9 @@ export const AutoPaginateExtension = Extension.create({
     ];
   },
 });
+
+export default AutoPaginateExtension;
+
+//
+
+//

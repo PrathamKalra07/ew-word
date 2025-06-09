@@ -52,7 +52,7 @@ import { useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import React from 'react';
 // import { PageBreak } from './extensions/PageBreaks';
-import { AutoPaginateExtension } from './extensions/AutoPaginateExtension';
+import AutoPaginateExtension from './extensions/AutoPaginateExtension';
 
  
     const frameworks = [
@@ -168,7 +168,7 @@ const fontSizes = [
         fullHTML = fullHTML.replace(/<section style="page-break-after: always;">/g,'');
         fullHTML = fullHTML.replace(/<\/section>/g, '<p style="page-break-after: always;">&nbsp;</p>');
         fullHTML = fullHTML.replace(/<div class="pagebreak">&nbsp;<\/div>/g,'<p style="page-break-after: always;">&nbsp;</p>');
-        // fullHTML = fullHTML.replace(/<\/div>/g, '<p style="page-break-after: always;">&nbsp;</p>');
+        fullHTML = fullHTML.replace(/<\/div>/g, '<p style="page-break-after: always;">&nbsp;</p>');
 
         console.log(fullHTML);
         const imgHtml = fixImageSizes(fullHTML);
@@ -379,6 +379,7 @@ function getFontFamilyAtCursor(editor): { fontFamily: string, fontSize: string }
 }
 
 const processedHTML = useMemo(() => {
+  // console.log("Processed HTML : ",initialHTML);
   return processHtmlForTipTap(preserveLeadingSpaces(initialHTML));
 }, [initialHTML]);
 
@@ -465,51 +466,28 @@ UnderlineTipTap,
     const proseMirrorEl = document.querySelector('.ProseMirror');
     if (!proseMirrorEl) return;
 
-    const blocks = proseMirrorEl.querySelectorAll('p, h1, h2, ul, ol, blockquote');
+    // const blocks = proseMirrorEl.querySelectorAll('p, h1, h2, ul, ol, blockquote');
 
-    let runningHeight = 0;
+    // let runningHeight = 0;
 
     
-    blocks.forEach(block => {
-      const height = block.clientHeight;
-      runningHeight += height;
+    // blocks.forEach(block => {
+    //   const height = block.clientHeight;
+    //   runningHeight += height;
 
-      const prevNode = block.previousElementSibling?.classList.contains('page-break');
+    //   const prevNode = block.previousElementSibling?.classList.contains('page-break');
 
-      console.log(prevNode)
+    //   console.log(prevNode)
 
-      if (runningHeight > 1050 && !prevNode) {
-        const pos = editor.view.posAtDOM(block, 0);
-        editor.commands.insertContentAt(pos, { type: 'pageBreak' });
-        runningHeight = 0;
-      }
-    });
+    //   if (runningHeight > 1050 && !prevNode) {
+    //     const pos = editor.view.posAtDOM(block, 0);
+    //     editor.commands.insertContentAt(pos, { type: 'pageBreak' });
+    //     runningHeight = 0;
+    //   }
+    // });
   };
 
-  //  const proseMirrorEl = document.querySelector('.ProseMirror');
-  //   if (!proseMirrorEl) return;
-
-  //   const blocks = proseMirrorEl.querySelectorAll('p, h1, h2, ul, ol, blockquote');
-
-  //   let runningHeight = 0;
-
-    
-  //   blocks.forEach(block => {
-  //     const height = block.clientHeight;
-  //     runningHeight += height;
-
-  //     const prevNode = block.previousElementSibling?.classList.contains('page-break');
-
-  //     console.log(prevNode)
-
-  //     if (runningHeight > 1050 && !prevNode) {
-  //       const pos = editor.view.posAtDOM(block, 0);
-  //       editor.commands.insertContentAt(pos, { type: 'pageBreak' });
-  //       runningHeight = 0;
-  //     }
-  //   });
-
-  // Listen to content updates
+  
   editor.on('create', handler);
   return () => {
     editor.off('create', handler);
@@ -645,7 +623,7 @@ UnderlineTipTap,
   </div>
   <HoverCard openDelay={100} closeDelay={100}>
   <HoverCardTrigger>    
-  <Button variant="outline" onClick={() =>{editor?.commands.insertContent({type: 'pageBreak',})}}>
+  <Button variant="outline" onClick={() =>{editor?.commands.deleteCurrentNode()}}>
     
     {/* '<div class="pagebreak" contenteditable="false" data-page-break="true">&nbsp;</div>' */}
     {/* editor?.commands.insertContent('</section><section style="page-break-after : always">'); */}
@@ -653,7 +631,7 @@ UnderlineTipTap,
 </Button>
 </HoverCardTrigger>
   <HoverCardContent className='w-min flex p-1 px-3 -mt-1 text-xs'>
-    Page Break
+    Delete Page
   </HoverCardContent>
 </HoverCard>
 <HoverCard openDelay={100} closeDelay={100}>
