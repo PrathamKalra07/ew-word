@@ -141,52 +141,111 @@ const fontSizes = [
     const params = useParams()
     const {fileId} = params;
 
-    const handleSave = async ()=>{
-      try{
-        setDownloadDisabled(true);
-        setSaveDisabled(true);
-        const content:string | undefined = editor?.getHTML();
-        let fullHTML = `
+//     const handleSave = async ()=>{
+//       try{
+//         setDownloadDisabled(true);
+//         setSaveDisabled(true);
+//         const content:string | undefined = editor?.getHTML();
+//         let fullHTML = `
+// <!DOCTYPE html>
+// <html>
+//   <head>
+//     <meta charset="utf-8">
+//     <title>Document</title>
+//     <style>
+//       body { font-family: Arial, sans-serif; padding: 20px; }
+//       section { margin-bottom: 1em; }
+//     </style>
+//   </head>
+//   <body>
+//     ${content}
+//   </body>
+// </html>
+
+
+// `;
+
+//         fullHTML = fullHTML.replace(/<section style="page-break-after: always;">/g,'');
+//         fullHTML = fullHTML.replace(/<\/section>/g, '<p style="page-break-after: always;">&nbsp;</p>');
+//         fullHTML = fullHTML.replace(/<div class="pagebreak">&nbsp;<\/div>/g,'<p style="page-break-after: always;">&nbsp;</p>');
+//         fullHTML = fullHTML.replace(/<\/div>/g, '<p style="page-break-after: always;">&nbsp;</p>');
+
+//         console.log(fullHTML);
+//         const imgHtml = fixImageSizes(fullHTML);
+//         const saveRes = await axios.post(`http://localhost:8085/save/`,{'html':imgHtml,'uuid':fileId});
+//         if(saveRes.status !== 200 || !saveRes ){
+//           console.log('error toast')
+//           throw saveRes;
+//         }
+  
+//         toast.success('Saved Successfully');
+//         setDownloadDisabled(false);
+//         setSaveDisabled(false);
+//       }
+//       catch(e){
+//         console.log(e);
+//         toast.error("Unexpected Error : ",e);
+//       }
+//     }
+
+const handleSave = async () => {
+  try {
+    setDownloadDisabled(true);
+    setSaveDisabled(true);
+    const content: string | undefined = editor?.getHTML();
+
+    if (!content) throw new Error('Editor content is empty');
+
+    let fullHTML = `
 <!DOCTYPE html>
 <html>
   <head>
-    <meta charset="utf-8">
+    <meta charset="utf-8" />
     <title>Document</title>
     <style>
       body { font-family: Arial, sans-serif; padding: 20px; }
-      section { margin-bottom: 1em; }
     </style>
   </head>
   <body>
     ${content}
   </body>
 </html>
-
-
 `;
 
-        fullHTML = fullHTML.replace(/<section style="page-break-after: always;">/g,'');
-        fullHTML = fullHTML.replace(/<\/section>/g, '<p style="page-break-after: always;">&nbsp;</p>');
-        fullHTML = fullHTML.replace(/<div class="pagebreak">&nbsp;<\/div>/g,'<p style="page-break-after: always;">&nbsp;</p>');
-        fullHTML = fullHTML.replace(/<\/div>/g, '<p style="page-break-after: always;">&nbsp;</p>');
+    // Remove all <section ...> opening tags
+    fullHTML = fullHTML.replace(/<section[^>]*>/g, '');
 
-        console.log(fullHTML);
-        const imgHtml = fixImageSizes(fullHTML);
-        const saveRes = await axios.post(`http://localhost:8085/save/`,{'html':imgHtml,'uuid':fileId});
-        if(saveRes.status !== 200 || !saveRes ){
-          console.log('error toast')
-          throw saveRes;
-        }
-  
-        toast.success('Saved Successfully');
-        setDownloadDisabled(false);
-        setSaveDisabled(false);
-      }
-      catch(e){
-        console.log(e);
-        toast.error("Unexpected Error : ",e);
-      }
+    // Replace all closing </section> tags with a page break paragraph having inline styles
+    fullHTML = fullHTML.replace(
+      /<\/section>/g,
+      '<p style="page-break-before: always; height: 0; margin: 0; padding: 0;"></p>'
+    );
+
+    // Optional: handle any old pagebreak divs if needed
+    // fullHTML = fullHTML.replace(/<div class="pagebreak">&nbsp;<\/div>/g, '<p style="page-break-before: always; height: 0; margin: 0; padding: 0;"></p>');
+
+    console.log(fullHTML);
+
+    const imgHtml = fixImageSizes(fullHTML);
+
+    const saveRes = await axios.post(`http://localhost:8085/save/`, { html: imgHtml, uuid: fileId });
+
+    if (saveRes.status !== 200 || !saveRes) {
+      console.log('error toast');
+      throw saveRes;
     }
+
+    toast.success('Saved Successfully');
+    setDownloadDisabled(false);
+    setSaveDisabled(false);
+  } catch (e) {
+    console.log(e);
+    toast.error('Unexpected Error: ' + (e instanceof Error ? e.message : String(e)));
+  }
+};
+
+
+
 
     const handleDownload = async ()=>{
       try{
