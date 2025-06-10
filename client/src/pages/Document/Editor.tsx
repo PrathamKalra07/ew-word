@@ -394,32 +394,40 @@ function createPageBreakElement(): HTMLElement {
 
 
 function getFontFamilyAtCursor(editor): { fontFamily: string, fontSize: string } | null {
-  const { from } = editor.state.selection;
-  let dom = editor.view.domAtPos(from);
+  const { from, to, empty } = editor.state.selection;
 
-  // If the node is a text node, use its parent
-  let element = (dom.node.nodeType === 3 ? dom.node.parentElement : dom.node) as HTMLElement;
+  let domNode: HTMLElement | null = null;
 
-  // If element is a block like <p> with no style, try to find a styled span inside
-  if (element && element.nodeType === 1 && element.childNodes.length > 0) {
-    const styledChild = Array.from(element.childNodes).find(child => {
-      if (child.nodeType !== 1) return false;
-      const style = window.getComputedStyle(child as HTMLElement);
-      return style.fontFamily && style.fontFamily !== "";
-    }) as HTMLElement;
-
-    if (styledChild) element = styledChild;
+  if (!empty) {
+    // Get the DOM node at the start of the selection range
+    const domAtStart = editor.view.domAtPos(from);
+    domNode = (domAtStart.node.nodeType === 3 ? domAtStart.node.parentElement : domAtStart.node) as HTMLElement;
+  } else {
+    // Cursor is collapsed — use the current position
+    const dom = editor.view.domAtPos(from);
+    domNode = (dom.node.nodeType === 3 ? dom.node.parentElement : dom.node) as HTMLElement;
   }
 
-  if (!element) return null;
+  if (!domNode) return null;
 
-  const computedStyle = window.getComputedStyle(element);
+  // Traverse down to find styled span/text if block has no style
+  if (domNode && domNode.nodeType === 1 && domNode.childNodes.length > 0) {
+    const styledChild = Array.from(domNode.childNodes).find(child => {
+      if (child.nodeType !== 1) return false;
+      const style = window.getComputedStyle(child as HTMLElement);
+      return style.fontFamily && style.fontFamily !== '';
+    }) as HTMLElement;
+
+    if (styledChild) domNode = styledChild;
+  }
+
+  const computedStyle = window.getComputedStyle(domNode);
   const rawFont = computedStyle.fontFamily;
   const fontSize = computedStyle.fontSize;
 
   const cleanedFont = rawFont
-    .split(",")[0]
-    .replace(/['"]/g, "")
+    .split(',')[0]
+    .replace(/['"]/g, '')
     .trim();
 
   const matchedFont = frameworks.find(font => font.value === cleanedFont);
@@ -433,6 +441,9 @@ function getFontFamilyAtCursor(editor): { fontFamily: string, fontSize: string }
 
   return null;
 }
+
+
+
 
 const processedHTML = useMemo(() => {
   // console.log("Processed HTML : ",initialHTML);
@@ -507,49 +518,74 @@ UnderlineTipTap,
     });
 
 
-    useEffect(() => {
+//     useEffect(() => {
+//   if (!editor) return;
+
+//   const handler = () => {
+//     // Update font at cursor
+//     const getFontStyle: { fontFamily: string; fontSize: string } | null = getFontFamilyAtCursor(editor);
+//     const font: string = getFontStyle?.fontFamily || '';
+//     const size: string = getFontStyle?.fontSize || '';
+
+//     setFontFamilyValue(font);
+//     setFontSize(size);
+
+//     // Check section heights
+//     const proseMirrorEl = document.querySelector('.ProseMirror');
+//     if (!proseMirrorEl) return;
+
+//     // const blocks = proseMirrorEl.querySelectorAll('p, h1, h2, ul, ol, blockquote');
+
+//     // let runningHeight = 0;
+
+    
+//     // blocks.forEach(block => {
+//     //   const height = block.clientHeight;
+//     //   runningHeight += height;
+
+//     //   const prevNode = block.previousElementSibling?.classList.contains('page-break');
+
+//     //   console.log(prevNode)
+
+//     //   if (runningHeight > 1050 && !prevNode) {
+//     //     const pos = editor.view.posAtDOM(block, 0);
+//     //     editor.commands.insertContentAt(pos, { type: 'pageBreak' });
+//     //     runningHeight = 0;
+//     //   }
+//     // });
+//   };
+
+  
+//   editor.on('create', handler);
+//   return () => {
+//     editor.off('create', handler);
+//   };
+// }, [editor]);
+
+useEffect(() => {
   if (!editor) return;
 
   const handler = () => {
-    // Update font at cursor
-    const getFontStyle: { fontFamily: string; fontSize: string } | null = getFontFamilyAtCursor(editor);
-    const font: string = getFontStyle?.fontFamily || '';
-    const size: string = getFontStyle?.fontSize || '';
+    const fontInfo = getFontFamilyAtCursor(editor);
+    const font = fontInfo?.fontFamily || '';
+    const size = fontInfo?.fontSize || '';
 
     setFontFamilyValue(font);
     setFontSize(size);
-
-    // Check section heights
-    const proseMirrorEl = document.querySelector('.ProseMirror');
-    if (!proseMirrorEl) return;
-
-    // const blocks = proseMirrorEl.querySelectorAll('p, h1, h2, ul, ol, blockquote');
-
-    // let runningHeight = 0;
-
-    
-    // blocks.forEach(block => {
-    //   const height = block.clientHeight;
-    //   runningHeight += height;
-
-    //   const prevNode = block.previousElementSibling?.classList.contains('page-break');
-
-    //   console.log(prevNode)
-
-    //   if (runningHeight > 1050 && !prevNode) {
-    //     const pos = editor.view.posAtDOM(block, 0);
-    //     editor.commands.insertContentAt(pos, { type: 'pageBreak' });
-    //     runningHeight = 0;
-    //   }
-    // });
   };
 
-  
-  editor.on('create', handler);
+  editor.on('selectionUpdate', handler);
+  editor.on('transaction', handler);
+
+  // Call once on load to sync initial state
+  handler();
+
   return () => {
-    editor.off('create', handler);
+    editor.off('selectionUpdate', handler);
+    editor.off('transaction', handler);
   };
 }, [editor]);
+
 
 useEffect(() => {
   if (!editor) return;

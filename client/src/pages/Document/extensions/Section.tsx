@@ -92,7 +92,7 @@ addKeyboardShortcuts() {
       const checkOverflowAndSplit = () => {
         const contentHeight = contentDOM.scrollHeight;
 
-        if (contentHeight > A4_HEIGHT_PX + 10) {
+        if (contentHeight > A4_HEIGHT_PX - 100) {
           const pos = getPos();
           const sectionNode = editor.state.doc.nodeAt(pos);
           if (!sectionNode) return;
